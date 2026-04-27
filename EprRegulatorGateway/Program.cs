@@ -1,14 +1,8 @@
-using EprRegulatorGateway.Example.Endpoints;
-using EprRegulatorGateway.Example.Services;
-using EprRegulatorGateway.Config;
 using EprRegulatorGateway.Utils;
 using EprRegulatorGateway.Utils.Http;
-using EprRegulatorGateway.Utils.Mongo;
 using System.Diagnostics.CodeAnalysis;
 using EprRegulatorGateway.Utils.Logging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using MongoDB.Driver;
-using MongoDB.Driver.Authentication.AWS;
 using Serilog;
 
 var app = BuildApp(args);
@@ -52,12 +46,10 @@ static void ConfigureServices(WebApplicationBuilder builder)
 
     ConfigureHeaderPropagation(services, configuration);
     ConfigureHttpClients(services);
-    ConfigureMongo(services, configuration);
 
     services.AddHealthChecks();
 
     // App services
-    services.AddSingleton<IExamplePersistence, ExamplePersistence>();
 }
 
 [ExcludeFromCodeCoverage]
@@ -79,24 +71,6 @@ static void ConfigureHttpClients(IServiceCollection services)
 {
     services.AddTransient<ProxyHttpMessageHandler>();
 
-    // services.AddHttpClientWithTracing<IExampleClient, ExampleClient>();
-    // services.AddHttpClientWithProxy<IExternalClient, ExternalClient>();
-}
-
-[ExcludeFromCodeCoverage]
-static void ConfigureMongo(IServiceCollection services, IConfiguration configuration)
-{
-
-    MongoExtensions.Register();
-    MongoConventions.Register();
-
-    services
-        .AddOptions<MongoConfig>()
-        .Bind(configuration.GetRequiredSection("Mongo"))
-        .ValidateDataAnnotations()
-        .ValidateOnStart();
-
-    services.AddSingleton<IMongoDbClientFactory, MongoDbClientFactory>();
 }
 
 [ExcludeFromCodeCoverage]
@@ -113,5 +87,4 @@ static void ConfigureEndpoints(WebApplication app)
     app.MapHealthChecks("/health", new HealthCheckOptions());
 
     // Remove before deploying
-    app.MapExampleEndpoints();
 }

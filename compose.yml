@@ -22,15 +22,6 @@ services:
     networks:
       - cdp-tenant
 
-  mongodb:
-    image: mongo:7.0.28
-    networks:
-      - cdp-tenant
-    ports:
-      - '27017:27017'
-    volumes:
-      - mongodb-data:/data
-
   ################################################################################
 
   # your-frontend:
@@ -61,24 +52,17 @@ services:
       - '8085:8085'
     links:
       - 'floci:floci'
-      - 'mongodb:mongodb'
     depends_on:
       floci:
         condition: service_healthy
-      mongodb:
-        condition: service_started
     env_file:
       - 'compose/aws.env'
     environment:
       ASPNETCORE_URLS: http://+:8085
-      Mongo__DatabaseUri: mongodb://mongodb:27017/
     networks:
       - cdp-tenant
 
 ################################################################################
-
-volumes:
-  mongodb-data:
 
 networks:
   cdp-tenant:
