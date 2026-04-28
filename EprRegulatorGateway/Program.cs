@@ -45,6 +45,7 @@ static void ConfigureServices(WebApplicationBuilder builder)
     services.AddProblemDetails();
     services.AddValidation();
     services.AddControllers();
+    services.AddOpenApi();
 
     services.AddHttpContextAccessor();
 
@@ -104,6 +105,13 @@ static void ConfigureMiddleware(WebApplication app)
 static void ConfigureEndpoints(WebApplication app)
 {
     app.MapHealthChecks("/health", new HealthCheckOptions());
+
+    app.MapOpenApi("/documentation/openapi/{documentName}.json");
+    app.UseReDoc(options =>
+    {
+        options.RoutePrefix = "documentation";
+        options.SpecUrl = "/documentation/openapi/v1.json";
+    });
 
     app.MapControllers();
 
