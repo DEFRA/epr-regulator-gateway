@@ -2,7 +2,10 @@ using EprRegulatorGateway.Utils;
 using EprRegulatorGateway.Utils.Http;
 using System.Diagnostics.CodeAnalysis;
 using EprRegulatorGateway.Utils.Logging;
+using EprRegulatorGateway.Account.Services;
+using EprRegulatorGateway.Account.Handlers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var app = BuildApp(args);
@@ -41,11 +44,12 @@ static void ConfigureServices(WebApplicationBuilder builder)
 
     services.AddProblemDetails();
     services.AddValidation();
+    services.AddControllers();
 
     services.AddHttpContextAccessor();
 
     ConfigureHeaderPropagation(services, configuration);
-    ConfigureHttpClients(services);
+    ConfigureUserApi(services, configuration);
 
     services.AddHealthChecks();
 
@@ -67,10 +71,25 @@ static void ConfigureHeaderPropagation(IServiceCollection services, IConfigurati
 }
 
 [ExcludeFromCodeCoverage]
-static void ConfigureHttpClients(IServiceCollection services)
+static void ConfigureUserApi(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddTransient<ProxyHttpMessageHandler>();
+    services
+        .AddOptions<UserServiceOptions>()
+        .Bind(configuration.GetRequiredSection("UserService"))
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
 
+    services.AddTransient<UserServiceAuthorisationHandler>();
+
+    services.AddHttpClientWithTracing<IUserApiClient, UserApiClient>((sp, client) =>
+    {
+        var options = sp.GetRequiredService<IOptions<UserServiceOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+        client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+    })
+    .AddHttpMessageHandler<UserServiceAuthorisationHandler>();
+
+    services.AddScoped<IAccountClient, AccountClient>();
 }
 
 [ExcludeFromCodeCoverage]
@@ -85,6 +104,8 @@ static void ConfigureMiddleware(WebApplication app)
 static void ConfigureEndpoints(WebApplication app)
 {
     app.MapHealthChecks("/health", new HealthCheckOptions());
+
+    app.MapControllers();
 
     // Remove before deploying
 }
