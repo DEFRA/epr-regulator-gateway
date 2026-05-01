@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using WireMock.Server;
 
-namespace EprRegulatorGateway.IntegrationTests.WireMock;
+namespace EprRegulatorGateway.IntegrationTests.Setup.WireMock;
 
 [SuppressMessage("Major Code Smell", "S3881:\"IDisposable\" should be implemented correctly")]
 public sealed class WireMockContext : IDisposable

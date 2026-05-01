@@ -1,7 +1,7 @@
 using EprRegulatorGateway.Account.Contracts.Responses;
 using EprRegulatorGateway.Account.Services;
 
-namespace EprRegulatorGateway.IntegrationTests.Integration;
+namespace EprRegulatorGateway.IntegrationTests.Setup;
 
 internal sealed class FakeAccountClient : IAccountClient
 {

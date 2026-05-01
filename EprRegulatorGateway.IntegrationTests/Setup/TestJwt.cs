@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 
-namespace EprRegulatorGateway.IntegrationTests.Integration;
+namespace EprRegulatorGateway.IntegrationTests.Setup;
 
 internal static class TestJwt
 {

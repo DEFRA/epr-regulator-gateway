@@ -1,24 +1,28 @@
 using System.Net;
+using EprRegulatorGateway.IntegrationTests.Setup;
 using Xunit;
 
-namespace EprRegulatorGateway.IntegrationTests.Integration;
+namespace EprRegulatorGateway.IntegrationTests.Scenarios;
 
 [Trait("Category", "IntegrationTests")]
-public sealed class AccountApiIntegrationTests : IClassFixture<GatewayWebApplicationFactory>
+public sealed class AccountEndpointSmokeTests : IClassFixture<GatewayWebApplicationFactory>
 {
     private readonly GatewayWebApplicationFactory _factory;
 
-    public AccountApiIntegrationTests(GatewayWebApplicationFactory factory)
+    public AccountEndpointSmokeTests(GatewayWebApplicationFactory factory)
     {
         _factory = factory;
     }
+
+    private static Uri HealthUri => new("/health", UriKind.Relative);
+    private static Uri AccountUri(Guid userId) => new($"/api/account/{userId:D}", UriKind.Relative);
 
     [Fact]
     public async Task Health_returns_ok_without_authorization()
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken);
+        var response = await client.GetAsync(HealthUri, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -29,7 +33,7 @@ public sealed class AccountApiIntegrationTests : IClassFixture<GatewayWebApplica
         var client = _factory.CreateClient();
 
         var response = await client.GetAsync(
-            new Uri($"/api/account/{Guid.NewGuid():D}", UriKind.Relative),
+            AccountUri(Guid.NewGuid()),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -41,7 +45,7 @@ public sealed class AccountApiIntegrationTests : IClassFixture<GatewayWebApplica
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.GetAsync(
-            new Uri($"/api/account/{Guid.NewGuid():D}", UriKind.Relative),
+            AccountUri(Guid.NewGuid()),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

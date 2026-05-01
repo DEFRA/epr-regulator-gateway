@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace EprRegulatorGateway.IntegrationTests.Integration;
+namespace EprRegulatorGateway.IntegrationTests.Setup;
 
 public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program>
 {
