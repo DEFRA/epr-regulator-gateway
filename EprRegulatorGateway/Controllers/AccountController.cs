@@ -1,36 +1,45 @@
+using EprRegulatorGateway.Account.Contracts.Responses;
 using EprRegulatorGateway.Account.Services;
-using EprRegulatorGateway.Utils.Http;
+using EprRegulatorGateway.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace EprRegulatorGateway.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = PolicyNames.Read)]
 public sealed class AccountController(IAccountClient accountClient) : ControllerBase
 {
-    [HttpGet("Details/{id:guid}")]
-    public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AccountDetailsResponse>> GetById(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         if (id == Guid.Empty)
         {
-            return BadRequest("Account id is required.");
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid account id",
+                detail: "Account id must not be empty.");
         }
 
-        if (User.Identity?.IsAuthenticated == true)
+        try
         {
-            var currentUserId = User.TryGetUserId();
-            if (currentUserId is null)
-            {
-                return Unauthorized("User id claim is missing or invalid.");
-            }
-
-            if (currentUserId.Value != id)
-            {
-                return Forbid();
-            }
+            var details = await accountClient.GetAccountDetailsAsync(id, cancellationToken);
+            return Ok(details);
         }
-
-        var details = await accountClient.GetAccountDetailsAsync(id, cancellationToken);
-        return Ok(details);
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            // Translate downstream 404 from the User Service to an upstream 404.
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Not Found",
+                detail: "Account was not found.");
+        }
     }
 }

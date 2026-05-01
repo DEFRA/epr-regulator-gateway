@@ -1,3 +1,4 @@
+using EprRegulatorGateway.Authentication;
 using EprRegulatorGateway.Utils;
 using EprRegulatorGateway.Utils.Http;
 using System.Diagnostics.CodeAnalysis;
@@ -46,6 +47,8 @@ static void ConfigureServices(WebApplicationBuilder builder)
     services.AddValidation();
     services.AddControllers();
     services.AddOpenApi();
+
+    services.AddAuthenticationAuthorization(configuration);
 
     services.AddHttpContextAccessor();
 
@@ -97,8 +100,12 @@ static void ConfigureUserApi(IServiceCollection services, IConfiguration configu
 static void ConfigureMiddleware(WebApplication app)
 {
     app.UseSerilogRequestLogging();
+    app.UseDownstreamExceptionHandling();
 
     app.UseHeaderPropagation();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
 }
 
 [ExcludeFromCodeCoverage]
