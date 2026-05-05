@@ -4,11 +4,10 @@
       "commandName": "Project",
       "dotnetRunMessages": false,
       "launchBrowser": false,
-      "applicationUrl": "http://localhost:8085",
+      "applicationUrl": "http://localhost:8085/documentation/index.html",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Mongo__DatabaseUri": "mongodb://127.0.0.1:27017/",
-        "Mongo__DatabaseName": "epr-regulator-gateway"
+        "ASPNETCORE_URLS": "http://localhost:8085"
       }
     }
   }

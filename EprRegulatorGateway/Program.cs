@@ -1,14 +1,12 @@
-using EprRegulatorGateway.Example.Endpoints;
-using EprRegulatorGateway.Example.Services;
-using EprRegulatorGateway.Config;
+using EprRegulatorGateway.Authentication;
 using EprRegulatorGateway.Utils;
 using EprRegulatorGateway.Utils.Http;
-using EprRegulatorGateway.Utils.Mongo;
 using System.Diagnostics.CodeAnalysis;
 using EprRegulatorGateway.Utils.Logging;
+using EprRegulatorGateway.Account.Services;
+using EprRegulatorGateway.Account.Handlers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using MongoDB.Driver;
-using MongoDB.Driver.Authentication.AWS;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var app = BuildApp(args);
@@ -47,17 +45,19 @@ static void ConfigureServices(WebApplicationBuilder builder)
 
     services.AddProblemDetails();
     services.AddValidation();
+    services.AddControllers();
+    services.AddOpenApi();
+
+    services.AddAuthenticationAuthorization(configuration);
 
     services.AddHttpContextAccessor();
 
     ConfigureHeaderPropagation(services, configuration);
-    ConfigureHttpClients(services);
-    ConfigureMongo(services, configuration);
+    ConfigureUserApi(services, configuration);
 
     services.AddHealthChecks();
 
     // App services
-    services.AddSingleton<IExamplePersistence, ExamplePersistence>();
 }
 
 [ExcludeFromCodeCoverage]
@@ -75,36 +75,37 @@ static void ConfigureHeaderPropagation(IServiceCollection services, IConfigurati
 }
 
 [ExcludeFromCodeCoverage]
-static void ConfigureHttpClients(IServiceCollection services)
+static void ConfigureUserApi(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddTransient<ProxyHttpMessageHandler>();
-
-    // services.AddHttpClientWithTracing<IExampleClient, ExampleClient>();
-    // services.AddHttpClientWithProxy<IExternalClient, ExternalClient>();
-}
-
-[ExcludeFromCodeCoverage]
-static void ConfigureMongo(IServiceCollection services, IConfiguration configuration)
-{
-
-    MongoExtensions.Register();
-    MongoConventions.Register();
-
     services
-        .AddOptions<MongoConfig>()
-        .Bind(configuration.GetRequiredSection("Mongo"))
+        .AddOptions<UserServiceOptions>()
+        .Bind(configuration.GetRequiredSection("UserService"))
         .ValidateDataAnnotations()
         .ValidateOnStart();
 
-    services.AddSingleton<IMongoDbClientFactory, MongoDbClientFactory>();
+    services.AddTransient<UserServiceAuthorisationHandler>();
+
+    services.AddHttpClientWithTracing<IUserApiClient, UserApiClient>((sp, client) =>
+    {
+        var options = sp.GetRequiredService<IOptions<UserServiceOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+        client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+    })
+    .AddHttpMessageHandler<UserServiceAuthorisationHandler>();
+
+    services.AddScoped<IAccountClient, AccountClient>();
 }
 
 [ExcludeFromCodeCoverage]
 static void ConfigureMiddleware(WebApplication app)
 {
     app.UseSerilogRequestLogging();
+    app.UseDownstreamExceptionHandling();
 
     app.UseHeaderPropagation();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
 }
 
 [ExcludeFromCodeCoverage]
@@ -112,6 +113,14 @@ static void ConfigureEndpoints(WebApplication app)
 {
     app.MapHealthChecks("/health", new HealthCheckOptions());
 
+    app.MapOpenApi("/documentation/openapi/{documentName}.json");
+    app.UseReDoc(options =>
+    {
+        options.RoutePrefix = "documentation";
+        options.SpecUrl = "/documentation/openapi/v1.json";
+    });
+
+    app.MapControllers();
+
     // Remove before deploying
-    app.MapExampleEndpoints();
 }
