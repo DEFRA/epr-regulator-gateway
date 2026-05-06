@@ -8,7 +8,7 @@ using System.Net;
 namespace EprRegulatorGateway.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/account")]
 [Authorize(Policy = PolicyNames.Read)]
 public sealed class AccountController(IAccountClient accountClient) : ControllerBase
 {
