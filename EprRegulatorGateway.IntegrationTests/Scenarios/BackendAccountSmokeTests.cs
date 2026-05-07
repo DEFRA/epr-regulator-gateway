@@ -5,11 +5,11 @@ using Xunit;
 namespace EprRegulatorGateway.IntegrationTests.Scenarios;
 
 [Trait("Category", "IntegrationTests")]
-public sealed class AccountEndpointSmokeTests : IClassFixture<GatewayWebApplicationFactory>
+public sealed class BackendAccountSmokeTests : IClassFixture<GatewayWebApplicationFactory>
 {
     private readonly GatewayWebApplicationFactory _factory;
 
-    public AccountEndpointSmokeTests(GatewayWebApplicationFactory factory)
+    public BackendAccountSmokeTests(GatewayWebApplicationFactory factory)
     {
         _factory = factory;
     }
@@ -28,7 +28,7 @@ public sealed class AccountEndpointSmokeTests : IClassFixture<GatewayWebApplicat
     }
 
     [Fact]
-    public async Task Account_without_authorization_returns_unauthorized()
+    public async Task Backend_account_route_without_authorization_returns_unauthorized()
     {
         var client = _factory.CreateClient();
 
@@ -40,7 +40,7 @@ public sealed class AccountEndpointSmokeTests : IClassFixture<GatewayWebApplicat
     }
 
     [Fact]
-    public async Task Account_with_valid_jwt_returns_ok()
+    public async Task Backend_account_route_with_valid_jwt_returns_ok()
     {
         var client = _factory.CreateAuthenticatedClient();
 
