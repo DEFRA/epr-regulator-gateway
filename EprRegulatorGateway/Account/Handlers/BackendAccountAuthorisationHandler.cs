@@ -33,11 +33,11 @@ public sealed class BackendAccountAuthorisationHandler : DelegatingHandler
     {
         if (RequiresClientCredentials)
         {
-            var token = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            var token = await GetAccessTokenAsync(cancellationToken);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        return await base.SendAsync(request, cancellationToken);
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
@@ -47,7 +47,7 @@ public sealed class BackendAccountAuthorisationHandler : DelegatingHandler
             return _cachedAccessToken;
         }
 
-        await _tokenLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _tokenLock.WaitAsync(cancellationToken);
         try
         {
             if (_cachedAccessToken is not null && DateTimeOffset.UtcNow < _cachedAccessTokenExpiresAt)
@@ -68,16 +68,15 @@ public sealed class BackendAccountAuthorisationHandler : DelegatingHandler
                         ["client_secret"] = _options.ClientSecret!,
                         ["scope"] = _options.Scope!.Trim(),
                     }),
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken);
 
             response.EnsureSuccessStatusCode();
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var payload = await System.Text.Json.JsonSerializer.DeserializeAsync<TokenEndpointResponse>(
-                    stream,
-                    TokenResponseJsonOptions,
-                    cancellationToken)
-                .ConfigureAwait(false);
+                stream,
+                TokenResponseJsonOptions,
+                cancellationToken);
 
             if (payload is null || string.IsNullOrWhiteSpace(payload.AccessToken))
             {
