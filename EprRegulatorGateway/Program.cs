@@ -88,6 +88,12 @@ static void ConfigureBackendAccountService(IServiceCollection services, IConfigu
                           && !string.IsNullOrWhiteSpace(options.ClientSecret),
             "BackendAccountService: TokenEndpoint (absolute URL), ClientId, and ClientSecret are required when Scope is configured.");
 
+    services
+        .AddOptions<ClientCredentialsTokenOptions>()
+        .Bind(configuration.GetRequiredSection("BackendAccountService"))
+        .ValidateDataAnnotations();
+
+    services.AddSingleton<IClientCredentialsAccessTokenProvider, ClientCredentialsAccessTokenProvider>();
     services.AddTransient<BackendAccountAuthorisationHandler>();
 
     services.AddHttpClientWithTracing<IBackendAccountClient, BackendAccountClient>((sp, client) =>
