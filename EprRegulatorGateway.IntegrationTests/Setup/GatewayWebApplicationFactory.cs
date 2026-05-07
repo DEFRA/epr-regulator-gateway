@@ -12,7 +12,7 @@ namespace EprRegulatorGateway.IntegrationTests.Setup;
 public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly List<Action<IWebHostBuilder>> _configure = [];
-    private bool _useFakeAccountClient = true;
+    private bool _useFakeAccountService = true;
 
     public GatewayWebApplicationFactory()
     {
@@ -24,9 +24,9 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
         return this;
     }
 
-    public GatewayWebApplicationFactory UseFakeAccountClient(bool useFakeAccountClient)
+    public GatewayWebApplicationFactory UseFakeAccountService(bool useFakeAccountService)
     {
-        _useFakeAccountClient = useFakeAccountClient;
+        _useFakeAccountService = useFakeAccountService;
         return this;
     }
 
@@ -35,12 +35,12 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
         builder.UseSetting("Acl:Clients:IntegrationTest:Type", nameof(AclOptions.ClientType.OAuth));
         builder.UseSetting("Acl:Clients:IntegrationTest:Scopes:0", Scopes.Read);
 
-        if (_useFakeAccountClient)
+        if (_useFakeAccountService)
         {
             builder.ConfigureTestServices(services =>
             {
-                services.RemoveAll<IAccountClient>();
-                services.AddScoped<IAccountClient, FakeAccountClient>();
+                services.RemoveAll<IAccountService>();
+                services.AddScoped<IAccountService, FakeAccountService>();
             });
         }
 

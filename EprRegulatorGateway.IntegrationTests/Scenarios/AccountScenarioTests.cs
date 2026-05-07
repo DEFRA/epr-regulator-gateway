@@ -29,16 +29,16 @@ public sealed class AccountScenarioTests : IAsyncLifetime
     private GatewayWebApplicationFactory CreateFactory()
     {
         return new GatewayWebApplicationFactory()
-            .UseFakeAccountClient(false)
+            .UseFakeAccountService(false)
             .WithWebHostConfiguration(
                 builder =>
                 {
-                    builder.UseSetting("UserService:BaseUrl", _wireMock!.BaseAddress);
-                    builder.UseSetting("UserService:Scope", "");
+                    builder.UseSetting("BackendAccountService:BaseUrl", _wireMock!.BaseAddress);
+                    builder.UseSetting("BackendAccountService:Scope", "");
                 });
     }
 
-    private void StubUserServiceResponse(Guid userId, int statusCode, string body, string? contentType = null)
+    private void StubBackendAccountResponse(Guid userId, int statusCode, string body, string? contentType = null)
     {
         var response = Response.Create().WithStatusCode(statusCode).WithBody(body);
 
@@ -66,11 +66,11 @@ public sealed class AccountScenarioTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task When_user_service_returns_ok_then_account_endpoint_returns_mapped_payload()
+    public async Task When_backend_account_returns_ok_then_account_endpoint_returns_mapped_payload()
     {
         var userId = Guid.NewGuid();
 
-        StubUserServiceResponse(
+        StubBackendAccountResponse(
             userId,
             statusCode: 200,
             contentType: "application/json",
@@ -111,11 +111,11 @@ public sealed class AccountScenarioTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task When_user_service_returns_404_then_account_endpoint_returns_404_problem_details()
+    public async Task When_backend_account_returns_404_then_account_endpoint_returns_404_problem_details()
     {
         var userId = Guid.NewGuid();
 
-        StubUserServiceResponse(userId, statusCode: 404, body: "not found");
+        StubBackendAccountResponse(userId, statusCode: 404, body: "not found");
 
         using var factory = CreateFactory();
 
@@ -130,11 +130,11 @@ public sealed class AccountScenarioTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task When_user_service_returns_invalid_json_then_gateway_returns_500()
+    public async Task When_backend_account_returns_invalid_json_then_gateway_returns_500()
     {
         var userId = Guid.NewGuid();
 
-        StubUserServiceResponse(
+        StubBackendAccountResponse(
             userId,
             statusCode: 200,
             contentType: "application/json",

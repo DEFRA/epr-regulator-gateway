@@ -10,7 +10,7 @@ namespace EprRegulatorGateway.Controllers;
 [ApiController]
 [Route("api/account")]
 [Authorize(Policy = PolicyNames.Read)]
-public sealed class AccountController(IAccountClient accountClient) : ControllerBase
+public sealed class AccountController(IAccountService accountService) : ControllerBase
 {
     [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -30,12 +30,11 @@ public sealed class AccountController(IAccountClient accountClient) : Controller
 
         try
         {
-            var details = await accountClient.GetAccountDetailsAsync(id, cancellationToken);
+            var details = await accountService.GetAccountDetailsAsync(id, cancellationToken);
             return Ok(details);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            // Translate downstream 404 from the User Service to an upstream 404.
             return Problem(
                 statusCode: StatusCodes.Status404NotFound,
                 title: "Not Found",
