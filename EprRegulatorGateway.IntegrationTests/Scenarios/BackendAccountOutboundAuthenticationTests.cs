@@ -9,6 +9,7 @@ using Xunit;
 
 namespace EprRegulatorGateway.IntegrationTests.Scenarios;
 
+[Trait("Category", "IntegrationTests")]
 public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 {
     private WireMockContext? _wireMock;
@@ -68,17 +69,23 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
                     .WithBody(json));
     }
 
+    private void StubOAuthTokenFailure(int statusCode, string body)
+    {
+        _wireMock!.Server.Given(Request.Create().UsingPost().WithPath("/integration-oauth/token"))
+            .RespondWith(Response.Create().WithStatusCode(statusCode).WithBody(body));
+    }
+
     private static string UserOrganisationsJson(Guid userId)
     {
         var payload = new
         {
             user = new
             {
-                firstName = "Token",
-                lastName = "Flow",
+                firstName = "Stub",
+                lastName = "User",
                 serviceRole = "Regulator",
                 serviceRoleId = 42,
-                email = "token-flow@example.test",
+                email = "stub.user@example.test",
                 organisations = new[]
                 {
                     new { id = userId.ToString("D"), name = "Stub Org", nationId = 99 },
@@ -91,14 +98,14 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
     }
 
-    private void StubUserOrganisationsSuccessfulWhenBearerMatches(Guid userId)
+    private void StubUserOrganisationsRequiringBearer(Guid userId, string requiredBearerToken)
     {
         _wireMock!.Server.Given(
                 Request.Create()
                     .UsingGet()
                     .WithPath("/api/users/user-organisations")
                     .WithParam("userId", userId.ToString("D"))
-                    .WithHeader("Authorization", $"Bearer {StubIssuedAccessToken}"))
+                    .WithHeader("Authorization", $"Bearer {requiredBearerToken}"))
             .RespondWith(
                 Response.Create()
                     .WithStatusCode(200)
@@ -107,12 +114,12 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task When_scope_configured_gateway_fetches_oauth_token_then_calls_backend_api_with_matching_bearer_token()
+    public async Task When_scope_configured_gateway_fetches_oauth_token_then_calls_backend_with_that_bearer()
     {
         var userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
         StubOAuthTokenSuccess();
-        StubUserOrganisationsSuccessfulWhenBearerMatches(userId);
+        StubUserOrganisationsRequiringBearer(userId, StubIssuedAccessToken);
 
         await using var factory = CreateGatewayWithOutboundAuth();
         var client = factory.CreateAuthenticatedClient();
@@ -123,13 +130,18 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var json = await response.Content.ReadFromJsonAsync<JsonElement>(
-            cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Equal(userId.ToString("D"), json.GetProperty("userId").GetString());
-        Assert.Equal("Token", json.GetProperty("firstName").GetString());
-        Assert.Equal("Flow", json.GetProperty("lastName").GetString());
-        Assert.Equal("Stub Org", json.GetProperty("organisationName").GetString());
-        Assert.Equal(99, json.GetProperty("nationId").GetInt32());
+        var tokenRequests = _wireMock!.Server.LogEntries
+            .Where(e => e.RequestMessage.Path == "/integration-oauth/token")
+            .ToList();
+        Assert.Single(tokenRequests);
+
+        var backendRequests = _wireMock!.Server.LogEntries
+            .Where(e => e.RequestMessage.Path == "/api/users/user-organisations")
+            .ToList();
+        Assert.Single(backendRequests);
+        Assert.Equal(
+            $"Bearer {StubIssuedAccessToken}",
+            backendRequests[0].RequestMessage.Headers!["Authorization"].Single());
     }
 
     [Fact]
@@ -137,8 +149,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
     {
         var userId = Guid.NewGuid();
 
-        _wireMock!.Server.Given(Request.Create().UsingPost().WithPath("/integration-oauth/token"))
-            .RespondWith(Response.Create().WithStatusCode(401).WithBody("invalid_client"));
+        StubOAuthTokenFailure(401, "invalid_client");
 
         await using var factory = CreateGatewayWithOutboundAuth();
         var client = factory.CreateAuthenticatedClient();
