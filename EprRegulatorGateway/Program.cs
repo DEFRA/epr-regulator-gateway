@@ -53,7 +53,7 @@ static void ConfigureServices(WebApplicationBuilder builder)
     services.AddHttpContextAccessor();
 
     ConfigureHeaderPropagation(services, configuration);
-    ConfigureUserApi(services, configuration);
+    ConfigureBackendAccountService(services, configuration);
 
     services.AddHealthChecks();
 
@@ -75,25 +75,36 @@ static void ConfigureHeaderPropagation(IServiceCollection services, IConfigurati
 }
 
 [ExcludeFromCodeCoverage]
-static void ConfigureUserApi(IServiceCollection services, IConfiguration configuration)
+static void ConfigureBackendAccountService(IServiceCollection services, IConfiguration configuration)
 {
     services
-        .AddOptions<UserServiceOptions>()
-        .Bind(configuration.GetRequiredSection("UserService"))
+        .AddOptions<BackendAccountServiceOptions>()
+        .Bind(configuration.GetRequiredSection("BackendAccountService"))
         .ValidateDataAnnotations()
-        .ValidateOnStart();
+        .Validate(
+            options => string.IsNullOrWhiteSpace(options.Scope)
+                       || Uri.TryCreate(options.TokenEndpoint!, UriKind.Absolute, out _)
+                          && !string.IsNullOrWhiteSpace(options.ClientId)
+                          && !string.IsNullOrWhiteSpace(options.ClientSecret),
+            "BackendAccountService: TokenEndpoint (absolute URL), ClientId, and ClientSecret are required when Scope is configured.");
 
-    services.AddTransient<UserServiceAuthorisationHandler>();
+    services
+        .AddOptions<ClientCredentialsTokenOptions>()
+        .Bind(configuration.GetRequiredSection("BackendAccountService"))
+        .ValidateDataAnnotations();
 
-    services.AddHttpClientWithTracing<IUserApiClient, UserApiClient>((sp, client) =>
+    services.AddSingleton<IClientCredentialsAccessTokenProvider, ClientCredentialsAccessTokenProvider>();
+    services.AddTransient<BackendAccountAuthorisationHandler>();
+
+    services.AddHttpClientWithTracing<IBackendAccountClient, BackendAccountClient>((sp, client) =>
     {
-        var options = sp.GetRequiredService<IOptions<UserServiceOptions>>().Value;
+        var options = sp.GetRequiredService<IOptions<BackendAccountServiceOptions>>().Value;
         client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
         client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
     })
-    .AddHttpMessageHandler<UserServiceAuthorisationHandler>();
+    .AddHttpMessageHandler<BackendAccountAuthorisationHandler>();
 
-    services.AddScoped<IAccountClient, AccountClient>();
+    services.AddScoped<IAccountService, AccountService>();
 }
 
 [ExcludeFromCodeCoverage]

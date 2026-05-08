@@ -3,7 +3,7 @@ using EprRegulatorGateway.Account.Services;
 
 namespace EprRegulatorGateway.IntegrationTests.Setup;
 
-internal sealed class FakeAccountClient : IAccountClient
+internal sealed class FakeAccountService : IAccountService
 {
     public Task<AccountDetailsResponse> GetAccountDetailsAsync(Guid userId, CancellationToken cancellationToken)
     {

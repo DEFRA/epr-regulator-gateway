@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace EprRegulatorGateway.Account.Services;
 
-public sealed class UserApiClient(HttpClient httpClient, ILogger<UserApiClient> logger) : IUserApiClient
+public sealed class BackendAccountClient(HttpClient httpClient, ILogger<BackendAccountClient> logger) : IBackendAccountClient
 {
     public async Task<UserOrganisationsListModel?> GetUserOrganisationsAsync(Guid userId, CancellationToken cancellationToken)
     {
@@ -22,7 +22,7 @@ public sealed class UserApiClient(HttpClient httpClient, ILogger<UserApiClient> 
             var snippet = body.Length <= 2048 ? body : body[..2048];
 
             throw new HttpRequestException(
-                $"UserService call failed with {(int)response.StatusCode} ({response.StatusCode}) for GET {response.RequestMessage?.RequestUri}. Body (first 2048 chars): {snippet}",
+                $"Backend account HTTP call failed with {(int)response.StatusCode} ({response.StatusCode}) for GET {response.RequestMessage?.RequestUri}. Body (first 2048 chars): {snippet}",
                 inner: null,
                 statusCode: response.StatusCode);
         }
@@ -30,7 +30,7 @@ public sealed class UserApiClient(HttpClient httpClient, ILogger<UserApiClient> 
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.Content.Headers.ContentLength is 0)
         {
             logger.LogWarning(
-                "UserService call returned empty body for GET {Uri}",
+                "Backend account service returned empty body for GET {Uri}",
                 response.RequestMessage?.RequestUri);
             return null;
         }
@@ -41,7 +41,7 @@ public sealed class UserApiClient(HttpClient httpClient, ILogger<UserApiClient> 
             if (model?.User is null)
             {
                 logger.LogWarning(
-                    "UserService call returned an unexpected payload for GET {Uri} (missing 'user')",
+                    "Backend account service returned an unexpected payload for GET {Uri} (missing 'user')",
                     response.RequestMessage?.RequestUri);
             }
 
@@ -52,7 +52,7 @@ public sealed class UserApiClient(HttpClient httpClient, ILogger<UserApiClient> 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var snippet = body.Length <= 2048 ? body : body[..2048];
             throw new JsonException(
-                $"UserService returned invalid JSON for GET {response.RequestMessage?.RequestUri}. Body (first 2048 chars): {snippet}",
+                $"Backend account service returned invalid JSON for GET {response.RequestMessage?.RequestUri}. Body (first 2048 chars): {snippet}",
                 ex);
         }
     }
