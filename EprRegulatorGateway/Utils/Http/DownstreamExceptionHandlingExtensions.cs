@@ -23,7 +23,7 @@ public static class DownstreamExceptionHandlingExtensions
                 }
 
                 // If the client cancelled the request, avoid translating into a 5xx.
-                if (exception is OperationCanceledException && context.RequestAborted.IsCancellationRequested)
+                if (context.RequestAborted.IsCancellationRequested && ExceptionChainContainsOperationCanceled(exception))
                 {
                     return;
                 }
@@ -48,23 +48,46 @@ public static class DownstreamExceptionHandlingExtensions
 
     private static (int statusCode, string title, string detail) Map(Exception exception)
     {
-        if (exception is HttpRequestException httpEx)
-        {
-            if (httpEx.StatusCode == HttpStatusCode.NotFound)
-            {
-                return (StatusCodes.Status404NotFound, "Not Found", "Resource was not found.");
-            }
+        HttpRequestException? transportHttpEx = null;
 
+        for (var e = exception; e is not null; e = e.InnerException)
+        {
+            switch (e)
+            {
+                case HttpRequestException { StatusCode: HttpStatusCode.NotFound }:
+                    return (StatusCodes.Status404NotFound, "Not Found", "Resource was not found.");
+
+                case HttpRequestException { StatusCode: not null }:
+                    return (StatusCodes.Status502BadGateway, "Bad Gateway", "Downstream service returned an error.");
+
+                case HttpRequestException httpEx:
+                    transportHttpEx ??= httpEx;
+                    break;
+
+                case TaskCanceledException or TimeoutException:
+                    return (StatusCodes.Status504GatewayTimeout, "Gateway Timeout", "Downstream service did not respond in time.");
+            }
+        }
+
+        if (transportHttpEx is not null)
+        {
             return (StatusCodes.Status502BadGateway, "Bad Gateway", "Downstream service returned an error.");
         }
 
-        // HttpClient timeouts typically surface as TaskCanceledException / OperationCanceledException.
-        if (exception is TaskCanceledException or TimeoutException)
+        return (StatusCodes.Status500InternalServerError, "Internal Server Error", "An unexpected error occurred.");
+    }
+
+    private static bool ExceptionChainContainsOperationCanceled(Exception exception)
+    {
+        for (var e = exception; e is not null; e = e.InnerException)
         {
-            return (StatusCodes.Status504GatewayTimeout, "Gateway Timeout", "Downstream service did not respond in time.");
+            if (e is OperationCanceledException)
+            {
+                return true;
+            }
         }
 
-        return (StatusCodes.Status500InternalServerError, "Internal Server Error", "An unexpected error occurred.");
+        return false;
     }
 }
 
