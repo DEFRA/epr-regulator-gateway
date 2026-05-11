@@ -19,9 +19,11 @@ public sealed class BackendAccountClient(HttpClient httpClient, ILogger<BackendA
         try
         {
             response = await httpClient.GetAsync(path, cancellationToken);
+            logger.LogInformation("Backend account outbound GET succeeded. Path={Path}, HttpClientTimeoutSeconds={HttpClientTimeoutSeconds}, CancellationRequested={CancellationRequested}", path, httpClient.Timeout.TotalSeconds, cancellationToken.IsCancellationRequested);
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Backend account outbound GET failed. Path={Path}, HttpClientTimeoutSeconds={HttpClientTimeoutSeconds}, CancellationRequested={CancellationRequested}", path, httpClient.Timeout.TotalSeconds, cancellationToken.IsCancellationRequested);
             throw new InvalidOperationException(
                 $"Backend account outbound GET failed before response. Path={path}, HttpClientTimeoutSeconds={httpClient.Timeout.TotalSeconds}, CancellationRequested={cancellationToken.IsCancellationRequested}",
                 ex);
