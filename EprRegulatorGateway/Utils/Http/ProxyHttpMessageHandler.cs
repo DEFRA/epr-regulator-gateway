@@ -27,9 +27,13 @@ public class ProxyHttpMessageHandler : HttpClientHandler
 
         Proxy = proxy;
         UseProxy = proxyUri != null;
+
+        logger.LogInformation(
+            "ProxyHttpMessageHandler constructed. UseProxy={UseProxy}, HandlerProxyAddress={HandlerProxyAddress}, HttpProxyEnv={HttpProxyEnv}",
+            UseProxy, proxy.Address, proxyUri);
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "ProxyHttpMessageHandler sending. RequestUri={RequestUri}, UseProxy={UseProxy}, HandlerProxyAddress={HandlerProxyAddress}, ResolvedProxyForRequest={ResolvedProxyForRequest}, HttpProxyEnv={HttpProxyEnv}",
@@ -39,6 +43,16 @@ public class ProxyHttpMessageHandler : HttpClientHandler
             UseProxy && Proxy is not null && request.RequestUri is not null ? Proxy.GetProxy(request.RequestUri) : null,
             Environment.GetEnvironmentVariable("HTTP_PROXY"));
 
-        return base.SendAsync(request, cancellationToken);
+        try
+        {
+            var response = await base.SendAsync(request, cancellationToken);
+            _logger.LogInformation("ProxyHttpMessageHandler base.SendAsync returned. RequestUri={RequestUri}, StatusCode={StatusCode}", request.RequestUri, (int)response.StatusCode);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ProxyHttpMessageHandler base.SendAsync threw. RequestUri={RequestUri}, CancellationRequested={CancellationRequested}", request.RequestUri, cancellationToken.IsCancellationRequested);
+            throw;
+        }
     }
 }
