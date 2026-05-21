@@ -34,6 +34,8 @@ public static class HttpClientRegistrationExtension
         where TClient : class
         where TImplementation : class, TClient
     {
+        Console.WriteLine($"AddHttpClientWithTracingAndProxy<{typeof(TImplementation).Name}>: HTTP_PROXY={Environment.GetEnvironmentVariable("HTTP_PROXY")}");
+
         services.AddTransient<ProxyHttpMessageHandler>();
 
         return services
