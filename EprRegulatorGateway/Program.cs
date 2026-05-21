@@ -96,7 +96,7 @@ static void ConfigureBackendAccountService(IServiceCollection services, IConfigu
     services.AddSingleton<IClientCredentialsAccessTokenProvider, ClientCredentialsAccessTokenProvider>();
     services.AddTransient<BackendAccountAuthorisationHandler>();
 
-    services.AddHttpClientWithTracing<IBackendAccountClient, BackendAccountClient>((sp, client) =>
+    services.AddHttpClientWithTracingAndProxy<IBackendAccountClient, BackendAccountClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<IOptions<BackendAccountServiceOptions>>().Value;
         client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
