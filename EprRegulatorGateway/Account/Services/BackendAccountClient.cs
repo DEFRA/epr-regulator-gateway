@@ -15,6 +15,10 @@ public sealed class BackendAccountClient(HttpClient httpClient, ILogger<BackendA
                 ["userId"] = userId.ToString("D")
             });
 
+        logger.LogInformation(
+            "Backend account outbound GET. Path={Path}, BaseAddress={BaseAddress}, HttpProxyEnv={HttpProxyEnv}",
+            path, httpClient.BaseAddress, Environment.GetEnvironmentVariable("HTTP_PROXY"));
+
         HttpResponseMessage response;
         try
         {
