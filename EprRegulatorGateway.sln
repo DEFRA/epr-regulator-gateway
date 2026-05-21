@@ -20,6 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 		README.md = README.md
 		upgrade-nugets.sh = upgrade-nugets.sh
+		upgrade-dotnet.sh = upgrade-dotnet.sh
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "compose", "compose", "{D4096180-5264-4700-9CC6-15A16D349729}"
