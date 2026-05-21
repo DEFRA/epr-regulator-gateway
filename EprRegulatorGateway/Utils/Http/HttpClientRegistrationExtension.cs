@@ -23,8 +23,6 @@ public static class HttpClientRegistrationExtension
         where TClient : class
         where TImplementation : class, TClient
     {
-        services.AddTransient<ProxyHttpMessageHandler>();
-
         return services
             .AddHttpClient<TClient, TImplementation>(configureClient)
             .AddHeaderPropagation();
