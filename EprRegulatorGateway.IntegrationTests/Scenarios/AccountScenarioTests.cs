@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using EprRegulatorGateway.IntegrationTests.Setup;
-using EprRegulatorGateway.IntegrationTests.Setup.WireMock;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using Xunit;
@@ -10,34 +9,8 @@ using Xunit;
 namespace EprRegulatorGateway.IntegrationTests.Scenarios;
 
 [Trait("Category", "IntegrationTests")]
-public sealed class AccountScenarioTests : IAsyncLifetime
+public sealed class AccountScenarioTests : IntegrationTestBase
 {
-    private WireMockContext? _wireMock;
-
-    public ValueTask InitializeAsync()
-    {
-        _wireMock = new WireMockContext();
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        _wireMock?.Dispose();
-        return ValueTask.CompletedTask;
-    }
-
-    private GatewayWebApplicationFactory CreateFactory()
-    {
-        return new GatewayWebApplicationFactory()
-            .UseFakeAccountService(false)
-            .WithWebHostConfiguration(
-                builder =>
-                {
-                    builder.UseSetting("BackendAccountService:BaseUrl", _wireMock!.BaseAddress);
-                    builder.UseSetting("BackendAccountService:Scope", "");
-                });
-    }
-
     private void StubBackendAccountResponse(Guid userId, int statusCode, string body, string? contentType = null)
     {
         var response = Response.Create().WithStatusCode(statusCode).WithBody(body);
@@ -47,7 +20,7 @@ public sealed class AccountScenarioTests : IAsyncLifetime
             response = response.WithHeader("Content-Type", contentType);
         }
 
-        _wireMock!.Server
+        BackendAccountServer
             .Given(
                 Request
                     .Create()
@@ -84,16 +57,14 @@ public sealed class AccountScenarioTests : IAsyncLifetime
                 "serviceRoleId": 123,
                 "email": "ada@example.test",
                 "organisations": [
-                  { "id": "11111111-1111-1111-1111-111111111111", "name": "Org A", "nationId": 2 }
+                  { "id": "9fbc5d8f-c60c-4aee-812b-fd2942b9e4cf", "name": "Org A", "nationId": 2 }
                 ]
               }
             }
             """
         );
 
-        using var factory = CreateFactory();
-
-        var client = factory.CreateAuthenticatedClient();
+        var client = Factory.CreateAuthenticatedClient();
 
         using var response = await GetAccount(client, userId);
 
@@ -117,9 +88,7 @@ public sealed class AccountScenarioTests : IAsyncLifetime
 
         StubBackendAccountResponse(userId, statusCode: 404, body: "not found");
 
-        using var factory = CreateFactory();
-
-        var client = factory.CreateAuthenticatedClient();
+        var client = Factory.CreateAuthenticatedClient();
 
         using var response = await GetAccount(client, userId);
 
@@ -140,13 +109,10 @@ public sealed class AccountScenarioTests : IAsyncLifetime
             contentType: "application/json",
             body: "{ this-is-not-valid-json }");
 
-        using var factory = CreateFactory();
-
-        var client = factory.CreateAuthenticatedClient();
+        var client = Factory.CreateAuthenticatedClient();
 
         using var response = await GetAccount(client, userId);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 }
-

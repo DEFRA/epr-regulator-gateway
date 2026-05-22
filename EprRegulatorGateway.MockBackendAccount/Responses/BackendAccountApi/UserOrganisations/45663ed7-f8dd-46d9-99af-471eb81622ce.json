@@ -1,0 +1,16 @@
+{
+  "user": {
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "serviceRole": "Regulator",
+    "serviceRoleId": 123,
+    "email": "ada.lovelace@example.local",
+    "organisations": [
+      {
+        "id": "1022a3b0-c8c0-4d0d-ab0c-1b32c82a8927",
+        "name": "Analytical Engines Ltd",
+        "nationId": 2
+      }
+    ]
+  }
+}

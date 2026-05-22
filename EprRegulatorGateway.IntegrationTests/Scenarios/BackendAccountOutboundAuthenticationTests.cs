@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using EprRegulatorGateway.IntegrationTests.Setup;
-using EprRegulatorGateway.IntegrationTests.Setup.WireMock;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using Xunit;
@@ -10,46 +9,25 @@ using Xunit;
 namespace EprRegulatorGateway.IntegrationTests.Scenarios;
 
 [Trait("Category", "IntegrationTests")]
-public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
+public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestBase
 {
-    private WireMockContext? _wireMock;
-
     private const string StubClientId = "integration-test-client-id";
     private const string StubClientSecret = "integration-test-client-secret";
-
     private const string StubIssuedAccessToken = "stub-oauth-access-token";
+    private const string TokenPath = "/integration-oauth/token";
 
-    private static string BackendBase(WireMockContext wm) =>
-        $"{wm.BaseAddress.TrimEnd('/')}/";
-
-    private static string StubTokenEndpoint(WireMockContext wm) =>
-        $"{wm.BaseAddress.TrimEnd('/')}/integration-oauth/token";
-
-    public ValueTask InitializeAsync()
+    protected override void ConfigureFactory(GatewayWebApplicationFactory factory)
     {
-        _wireMock = new WireMockContext();
-        return ValueTask.CompletedTask;
-    }
+        base.ConfigureFactory(factory);
 
-    public ValueTask DisposeAsync()
-    {
-        _wireMock?.Dispose();
-        return ValueTask.CompletedTask;
-    }
-
-    private GatewayWebApplicationFactory CreateGatewayWithOutboundAuth()
-    {
-        return new GatewayWebApplicationFactory()
-            .UseFakeAccountService(false)
-            .WithWebHostConfiguration(
-                builder =>
-                {
-                    builder.UseSetting("BackendAccountService:BaseUrl", BackendBase(_wireMock!));
-                    builder.UseSetting("BackendAccountService:TokenEndpoint", StubTokenEndpoint(_wireMock!));
-                    builder.UseSetting("BackendAccountService:ClientId", StubClientId);
-                    builder.UseSetting("BackendAccountService:ClientSecret", StubClientSecret);
-                    builder.UseSetting("BackendAccountService:Scope", "api://stub-resource/.default");
-                });
+        factory.WithWebHostConfiguration(
+            builder =>
+            {
+                builder.UseSetting("BackendAccountService:TokenEndpoint", $"{BackendAccountServer.Url}{TokenPath}");
+                builder.UseSetting("BackendAccountService:ClientId", StubClientId);
+                builder.UseSetting("BackendAccountService:ClientSecret", StubClientSecret);
+                builder.UseSetting("BackendAccountService:Scope", "api://stub-resource/.default");
+            });
     }
 
     private void StubOAuthTokenSuccess()
@@ -61,7 +39,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
                 ["expires_in"] = 3600,
             });
 
-        _wireMock!.Server.Given(Request.Create().UsingPost().WithPath("/integration-oauth/token"))
+        BackendAccountServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
             .RespondWith(
                 Response.Create()
                     .WithStatusCode(200)
@@ -71,7 +49,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 
     private void StubOAuthTokenFailure(int statusCode, string body)
     {
-        _wireMock!.Server.Given(Request.Create().UsingPost().WithPath("/integration-oauth/token"))
+        BackendAccountServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
             .RespondWith(Response.Create().WithStatusCode(statusCode).WithBody(body));
     }
 
@@ -100,7 +78,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 
     private void StubUserOrganisationsRequiringBearer(Guid userId, string requiredBearerToken)
     {
-        _wireMock!.Server.Given(
+        BackendAccountServer.Given(
                 Request.Create()
                     .UsingGet()
                     .WithPath("/api/users/user-organisations")
@@ -116,13 +94,12 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
     [Fact]
     public async Task When_scope_configured_gateway_fetches_oauth_token_then_calls_backend_with_that_bearer()
     {
-        var userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var userId = Guid.Parse("4614e15e-b84d-4abf-b629-c25081a7dbcb");
 
         StubOAuthTokenSuccess();
         StubUserOrganisationsRequiringBearer(userId, StubIssuedAccessToken);
 
-        await using var factory = CreateGatewayWithOutboundAuth();
-        var client = factory.CreateAuthenticatedClient();
+        var client = Factory.CreateAuthenticatedClient();
 
         using var response = await client.GetAsync(
             new Uri($"/api/account/{userId:D}", UriKind.Relative),
@@ -130,12 +107,12 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var tokenRequests = _wireMock!.Server.LogEntries
-            .Where(e => e.RequestMessage.Path == "/integration-oauth/token")
+        var tokenRequests = BackendAccountServer.LogEntries
+            .Where(e => e.RequestMessage.Path == TokenPath)
             .ToList();
         Assert.Single(tokenRequests);
 
-        var backendRequests = _wireMock!.Server.LogEntries
+        var backendRequests = BackendAccountServer.LogEntries
             .Where(e => e.RequestMessage.Path == "/api/users/user-organisations")
             .ToList();
         Assert.Single(backendRequests);
@@ -151,8 +128,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IAsyncLifetime
 
         StubOAuthTokenFailure(401, "invalid_client");
 
-        await using var factory = CreateGatewayWithOutboundAuth();
-        var client = factory.CreateAuthenticatedClient();
+        var client = Factory.CreateAuthenticatedClient();
 
         using var response = await client.GetAsync(
             new Uri($"/api/account/{userId:D}", UriKind.Relative),
