@@ -19,6 +19,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:8085",
         "BackendAccountService__BaseUrl": "http://localhost:8086/",
+        "BackendAccountService__TokenEndpoint": "http://localhost:8087/token",
         "BackendAccountService__Scope": ""
       }
     }

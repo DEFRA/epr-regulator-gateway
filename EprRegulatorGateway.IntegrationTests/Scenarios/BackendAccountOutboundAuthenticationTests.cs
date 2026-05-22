@@ -14,7 +14,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestB
     private const string StubClientId = "integration-test-client-id";
     private const string StubClientSecret = "integration-test-client-secret";
     private const string StubIssuedAccessToken = "stub-oauth-access-token";
-    private const string TokenPath = "/integration-oauth/token";
+    private const string TokenPath = "/token";
 
     protected override void ConfigureFactory(GatewayWebApplicationFactory factory)
     {
@@ -23,7 +23,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestB
         factory.WithWebHostConfiguration(
             builder =>
             {
-                builder.UseSetting("BackendAccountService:TokenEndpoint", $"{BackendAccountServer.Url}{TokenPath}");
+                builder.UseSetting("BackendAccountService:TokenEndpoint", $"{TokenServer.Url}{TokenPath}");
                 builder.UseSetting("BackendAccountService:ClientId", StubClientId);
                 builder.UseSetting("BackendAccountService:ClientSecret", StubClientSecret);
                 builder.UseSetting("BackendAccountService:Scope", "api://stub-resource/.default");
@@ -39,7 +39,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestB
                 ["expires_in"] = 3600,
             });
 
-        BackendAccountServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
+        TokenServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
             .RespondWith(
                 Response.Create()
                     .WithStatusCode(200)
@@ -49,7 +49,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestB
 
     private void StubOAuthTokenFailure(int statusCode, string body)
     {
-        BackendAccountServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
+        TokenServer.Given(Request.Create().UsingPost().WithPath(TokenPath))
             .RespondWith(Response.Create().WithStatusCode(statusCode).WithBody(body));
     }
 
@@ -107,7 +107,7 @@ public sealed class BackendAccountOutboundAuthenticationTests : IntegrationTestB
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var tokenRequests = BackendAccountServer.LogEntries
+        var tokenRequests = TokenServer.LogEntries
             .Where(e => e.RequestMessage.Path == TokenPath)
             .ToList();
         Assert.Single(tokenRequests);

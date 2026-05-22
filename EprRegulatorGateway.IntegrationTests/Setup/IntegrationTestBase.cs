@@ -9,6 +9,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     protected WireMockServer BackendAccountServer => Factory.BackendAccountServer;
 
+    protected WireMockServer TokenServer => Factory.TokenServer;
+
     protected virtual void ConfigureFactory(GatewayWebApplicationFactory factory)
     {
         factory.UseFakeAccountService(false);
@@ -21,6 +23,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         // Avoid mystery-guest from default canned mappings. Tests must define their own stubs explicitly.
         BackendAccountServer.ResetMappings();
+        TokenServer.ResetMappings();
 
         return ValueTask.CompletedTask;
     }
