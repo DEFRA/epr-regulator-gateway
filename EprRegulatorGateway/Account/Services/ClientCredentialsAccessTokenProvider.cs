@@ -10,16 +10,19 @@ public sealed class ClientCredentialsAccessTokenProvider : IClientCredentialsAcc
 
     private readonly ClientCredentialsTokenOptions _options;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<ClientCredentialsAccessTokenProvider> _logger;
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
     private string? _cachedAccessToken;
     private DateTimeOffset _cachedAccessTokenExpiresAt;
 
     public ClientCredentialsAccessTokenProvider(
         IOptions<ClientCredentialsTokenOptions> options,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ILogger<ClientCredentialsAccessTokenProvider> logger)
     {
         _options = options.Value;
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
@@ -46,6 +49,8 @@ public sealed class ClientCredentialsAccessTokenProvider : IClientCredentialsAcc
             using var tokenClient = _httpClientFactory.CreateClient();
             tokenClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 60));
 
+            _logger.LogInformation("TokenProvider POSTing to token endpoint. TokenEndpoint={TokenEndpoint}, TimeoutSeconds={TimeoutSeconds}", _options.TokenEndpoint, tokenClient.Timeout.TotalSeconds);
+
             using var response = await tokenClient.PostAsync(
                 _options.TokenEndpoint,
                 new FormUrlEncodedContent(
@@ -57,6 +62,8 @@ public sealed class ClientCredentialsAccessTokenProvider : IClientCredentialsAcc
                         ["scope"] = _options.Scope.Trim(),
                     }),
                 cancellationToken);
+
+            _logger.LogInformation("TokenProvider POST returned. TokenEndpoint={TokenEndpoint}, StatusCode={StatusCode}", _options.TokenEndpoint, (int)response.StatusCode);
 
             response.EnsureSuccessStatusCode();
 
