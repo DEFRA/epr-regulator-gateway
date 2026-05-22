@@ -1,22 +1,25 @@
 using System.Security.Claims;
 using EprRegulatorGateway.Account.Services;
 using EprRegulatorGateway.Authentication;
+using EprRegulatorGateway.MockBackendAccount;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using WireMock.Server;
 
 namespace EprRegulatorGateway.IntegrationTests.Setup;
 
 public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly List<Action<IWebHostBuilder>> _configure = [];
+    private readonly Lazy<WireMockServer> _backendAccountServer =
+        new(() => MockBackendAccountServer.Start(useSsl: false));
+
     private bool _useFakeAccountService = true;
 
-    public GatewayWebApplicationFactory()
-    {
-    }
+    public WireMockServer BackendAccountServer => _backendAccountServer.Value;
 
     public GatewayWebApplicationFactory WithWebHostConfiguration(Action<IWebHostBuilder> configure)
     {
@@ -43,6 +46,11 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
                 services.AddScoped<IAccountService, FakeAccountService>();
             });
         }
+        else
+        {
+            builder.UseSetting("BackendAccountService:BaseUrl", BackendAccountServer.Url);
+            builder.UseSetting("BackendAccountService:Scope", "");
+        }
 
         foreach (var configure in _configure)
         {
@@ -57,5 +65,16 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
             JwtAuthenticationHandler.SchemeName,
             TestJwt.GenerateJwt(new Claim(Claims.ClientId, "IntegrationTest")));
         return client;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && _backendAccountServer.IsValueCreated)
+        {
+            _backendAccountServer.Value.Stop();
+            _backendAccountServer.Value.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

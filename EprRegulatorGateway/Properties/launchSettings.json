@@ -1,4 +1,4 @@
-﻿{
+{
   "profiles": {
     "EprRegulatorGateway": {
       "commandName": "Project",
@@ -8,6 +8,18 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:8085"
+      }
+    },
+    "local-acc-backend": {
+      "commandName": "Project",
+      "dotnetRunMessages": false,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8085/documentation/index.html",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:8085",
+        "BackendAccountService__BaseUrl": "http://localhost:8086/",
+        "BackendAccountService__Scope": ""
       }
     }
   }

@@ -1,0 +1,16 @@
+{
+  "user": {
+    "firstName": "Default",
+    "lastName": "User",
+    "serviceRole": "Regulator",
+    "serviceRoleId": 1,
+    "email": "default.user@example.local",
+    "organisations": [
+      {
+        "id": "9e72eddf-c6f3-41a8-babf-7cec5d59cacd",
+        "name": "Default Organisation",
+        "nationId": 1
+      }
+    ]
+  }
+}

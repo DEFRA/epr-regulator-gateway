@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EprRegulatorGateway\EprRegulatorGateway.csproj" />
+    <ProjectReference Include="..\EprRegulatorGateway.MockBackendAccount\EprRegulatorGateway.MockBackendAccount.csproj" />
   </ItemGroup>
 
 </Project>
