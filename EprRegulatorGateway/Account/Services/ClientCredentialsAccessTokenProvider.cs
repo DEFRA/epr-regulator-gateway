@@ -5,6 +5,8 @@ namespace EprRegulatorGateway.Account.Services;
 
 public sealed class ClientCredentialsAccessTokenProvider : IClientCredentialsAccessTokenProvider, IDisposable
 {
+    public const string TokenClientName = "BackendAccountTokenClient";
+
     private static readonly System.Text.Json.JsonSerializerOptions TokenResponseJsonOptions =
         new() { PropertyNameCaseInsensitive = true };
 
@@ -46,7 +48,7 @@ public sealed class ClientCredentialsAccessTokenProvider : IClientCredentialsAcc
                 return _cachedAccessToken;
             }
 
-            using var tokenClient = _httpClientFactory.CreateClient();
+            using var tokenClient = _httpClientFactory.CreateClient(TokenClientName);
             tokenClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 60));
 
             _logger.LogInformation("TokenProvider POSTing to token endpoint. TokenEndpoint={TokenEndpoint}, TimeoutSeconds={TimeoutSeconds}", _options.TokenEndpoint, tokenClient.Timeout.TotalSeconds);

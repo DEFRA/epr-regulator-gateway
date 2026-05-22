@@ -96,6 +96,10 @@ static void ConfigureBackendAccountService(IServiceCollection services, IConfigu
     services.AddSingleton<IClientCredentialsAccessTokenProvider, ClientCredentialsAccessTokenProvider>();
     services.AddTransient<BackendAccountAuthorisationHandler>();
 
+    services.AddTransient<ProxyHttpMessageHandler>();
+    services.AddHttpClient(ClientCredentialsAccessTokenProvider.TokenClientName)
+        .ConfigurePrimaryHttpMessageHandler<ProxyHttpMessageHandler>();
+
     services.AddHttpClientWithTracingAndProxy<IBackendAccountClient, BackendAccountClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<IOptions<BackendAccountServiceOptions>>().Value;
