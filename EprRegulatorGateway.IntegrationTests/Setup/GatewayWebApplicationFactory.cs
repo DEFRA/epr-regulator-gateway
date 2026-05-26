@@ -2,6 +2,7 @@ using System.Security.Claims;
 using EprRegulatorGateway.Account.Services;
 using EprRegulatorGateway.Authentication;
 using EprRegulatorGateway.MockBackendAccount;
+using EprRegulatorGateway.MockTokenServer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -16,10 +17,14 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
     private readonly List<Action<IWebHostBuilder>> _configure = [];
     private readonly Lazy<WireMockServer> _backendAccountServer =
         new(() => MockBackendAccountServer.Start(useSsl: false));
+    private readonly Lazy<WireMockServer> _tokenServer =
+        new(() => MockTokenServerHost.Start(useSsl: false));
 
     private bool _useFakeAccountService = true;
 
     public WireMockServer BackendAccountServer => _backendAccountServer.Value;
+
+    public WireMockServer TokenServer => _tokenServer.Value;
 
     public GatewayWebApplicationFactory WithWebHostConfiguration(Action<IWebHostBuilder> configure)
     {
@@ -69,10 +74,19 @@ public sealed class GatewayWebApplicationFactory : WebApplicationFactory<Program
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && _backendAccountServer.IsValueCreated)
+        if (disposing)
         {
-            _backendAccountServer.Value.Stop();
-            _backendAccountServer.Value.Dispose();
+            if (_backendAccountServer.IsValueCreated)
+            {
+                _backendAccountServer.Value.Stop();
+                _backendAccountServer.Value.Dispose();
+            }
+
+            if (_tokenServer.IsValueCreated)
+            {
+                _tokenServer.Value.Stop();
+                _tokenServer.Value.Dispose();
+            }
         }
 
         base.Dispose(disposing);

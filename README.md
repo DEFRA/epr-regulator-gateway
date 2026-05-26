@@ -41,29 +41,38 @@ mystery guest — each test must explicitly stub what it needs.
 
 ### Backing services
 
-The gateway calls one downstream service:
+The gateway talks to two downstream hosts:
 
-- `BackendAccountService` — configured via `BackendAccountService:BaseUrl` etc.
-  in [appsettings.json](EprRegulatorGateway/appsettings.json)
+- `BackendAccountService` — the account API; configured via
+  `BackendAccountService:BaseUrl` in [appsettings.json](EprRegulatorGateway/appsettings.json)
+- The OAuth token endpoint — configured via `BackendAccountService:TokenEndpoint`
+  (a separate host in production, e.g. Azure AD)
 
-For local development, the [EprRegulatorGateway.MockBackendAccount](EprRegulatorGateway.MockBackendAccount)
-project hosts a `WireMock.Net` standalone server on `http://localhost:8086`
-serving pre-canned JSON from
-[`Responses/BackendAccountApi/`](EprRegulatorGateway.MockBackendAccount/Responses/BackendAccountApi).
-Files named `{guid}.json` are matched on the `userId` query string; `default.json`
-is the catch-all.
+For local development, each has its own runnable WireMock project:
 
-Run the mock:
+- [EprRegulatorGateway.MockBackendAccount](EprRegulatorGateway.MockBackendAccount)
+  on `http://localhost:8086` — serves canned JSON from
+  [`Responses/BackendAccountApi/`](EprRegulatorGateway.MockBackendAccount/Responses/BackendAccountApi).
+  Files named `{guid}.json` match on the `userId` query string; `default.json`
+  is the catch-all.
+- [EprRegulatorGateway.MockTokenServer](EprRegulatorGateway.MockTokenServer)
+  on `http://localhost:8087` — accepts `POST /token` and returns the canned
+  OAuth response from
+  [`Responses/TokenApi/default.json`](EprRegulatorGateway.MockTokenServer/Responses/TokenApi/default.json).
+
+Run them in separate terminals:
 
 ```bash
 dotnet run --project EprRegulatorGateway.MockBackendAccount
+dotnet run --project EprRegulatorGateway.MockTokenServer
 ```
 
 ### Running
 
 The default launch profile points at the dev Azure environment. To point the
-gateway at the local mock instead, use the `local-acc-backend` profile (which
-overrides `BackendAccountService:BaseUrl` and clears the OAuth scope):
+gateway at the local mocks instead, use the `local-acc-backend` profile (which
+overrides `BackendAccountService:BaseUrl`, points `TokenEndpoint` at the mock
+token server, and clears the OAuth scope so the token fetch is skipped):
 
 ```bash
 dotnet run --project EprRegulatorGateway --launch-profile local-acc-backend
