@@ -1,0 +1,16 @@
+{
+  "user": {
+    "firstName": "Seán",
+    "lastName": "O’Sullivan",
+    "serviceRole": "Regulator",
+    "serviceRoleId": 123,
+    "email": "Seán.O’Sullivan@example.local",
+    "organisations": [
+      {
+        "id": "dcb038d1-6330-490d-8579-9797114b1f03",
+        "name": "Northern Ireland Environment Agency",
+        "nationId": 3
+      }
+    ]
+  }
+}
