@@ -1,9 +1,0 @@
-{
-  "$schema": "http://json.schemastore.org/launchsettings.json",
-  "profiles": {
-    "EprRegulatorGateway.MockTokenServer": {
-      "commandName": "Project",
-      "launchBrowser": false
-    }
-  }
-}
